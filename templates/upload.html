@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Загрузка DICOM (папка / файлы / архив)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f4f6f8; margin: 0; padding: 40px 20px; color: #222;
+        }
+        .container {
+            max-width: 760px; margin: 0 auto; background: #fff;
+            border-radius: 12px; padding: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+        h1 { margin: 0 0 8px; font-size: 22px; }
+        .hint { color: #667; font-size: 14px; margin-bottom: 24px; }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab {
+            flex: 1; padding: 10px 14px; text-align: center; cursor: pointer;
+            border: 1px solid #d1d5db; border-radius: 8px;
+            font-size: 14px; background: #fafbfc; user-select: none;
+            transition: all .15s;
+        }
+        .tab:hover { background: #f1f5f9; }
+        .tab.active {
+            background: #3b82f6; color: #fff; border-color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .dropzone {
+            display: block;
+            background: #fafbfc;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background .2s ease;
+            user-select: none;
+            min-height: 180px;
+        }
+        .dropzone:hover, .dropzone.dragover {
+            background: #eff6ff;
+        }
+        .dropzone * { pointer-events: none; }
+        .dropzone .icon { font-size: 40px; color: #94a3b8; margin-bottom: 8px; }
+        .dropzone .main-text { font-size: 15px; font-weight: 500; }
+        .dropzone .sub-text { font-size: 13px; color: #667; margin-top: 4px; }
+
+        input[type=file] { display: none; }
+
+        .actions { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+        button, .btn-link {
+            padding: 10px 20px; border-radius: 8px; border: none;
+            font-size: 14px; font-weight: 500; cursor: pointer;
+            transition: background .15s; text-decoration: none;
+            display: inline-block;
+        }
+        button.primary { background: #3b82f6; color: #fff; }
+        button.primary:hover { background: #2563eb; }
+        button.primary:disabled { background: #93c5fd; cursor: not-allowed; }
+        button.secondary { background: #e5e7eb; color: #333; }
+        button.secondary:hover { background: #d1d5db; }
+
+        .btn-link.start {
+            background: #059669; color: #fff;
+        }
+        .btn-link.start:hover { background: #047857; }
+        .btn-link.start.hidden { display: none; }
+
+        .progress {
+            margin-top: 20px; height: 6px; background: #e5e7eb;
+            border-radius: 3px; overflow: hidden; display: none;
+        }
+        .progress.active { display: block; }
+        .progress .bar {
+            height: 100%; width: 0; background: #3b82f6; transition: width .2s;
+        }
+        .status { margin-top: 12px; font-size: 14px; display: none; }
+        .status.active { display: block; }
+        .status.ok { color: #059669; }
+        .status.err { color: #dc2626; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Загрузка DICOM</h1>
+    <p class="hint">
+        Выберите папку с DICOM-файлами, отдельные файлы или ZIP-архив.
+        Всё обрабатывается во временной папке и не сохраняется.
+    </p>
+
+    <div class="tabs">
+        <div class="tab active" data-mode="folder">📁 Папка</div>
+        <div class="tab" data-mode="files">📄 Файлы</div>
+        <div class="tab" data-mode="zip">🗜️ ZIP-архив</div>
+    </div>
+
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <!-- Выбор папки -->
+        <label for="folderInput" class="dropzone" id="dropzoneFolder">
+            <div class="icon">📁</div>
+            <div class="main-text">Нажмите, чтобы выбрать папку с DICOM</div>
+            <div class="sub-text">Все файлы из папки и подпапок будут загружены</div>
+            <input type="file" id="folderInput" name="files" multiple
+                   webkitdirectory directory>
+        </label>
+
+        <!-- Выбор файлов -->
+        <label for="filesInput" class="dropzone" id="dropzoneFiles" style="display:none;">
+            <div class="icon">📄</div>
+            <div class="main-text">Перетащите файлы сюда или нажмите для выбора</div>
+            <div class="sub-text">Поддерживаются .dcm, .dicom</div>
+            <input type="file" id="filesInput" name="files" multiple
+                   accept=".dcm,.dicom">
+        </label>
+
+        <!-- ZIP -->
+        <label for="zipInput" class="dropzone" id="dropzoneZip" style="display:none;">
+            <div class="icon">🗜️</div>
+            <div class="main-text">Перетащите ZIP-архив сюда или нажмите для выбора</div>
+            <div class="sub-text">Архив будет распакован, папки обработаны по отдельности</div>
+            <input type="file" id="zipInput" name="files" multiple
+                   accept=".zip,application/zip">
+        </label>
+
+        <div class="progress" id="progress">
+            <div class="bar" id="progressBar"></div>
+        </div>
+        <div class="status" id="status"></div>
+
+        <div class="actions">
+            <button type="submit" class="primary" id="submitBtn" disabled>
+                Загрузить
+            </button>
+            <button type="button" class="secondary" id="clearBtn">Очистить</button>
+            <a href="/start" class="btn-link start hidden" id="startBtn">К обработке →</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    const tabs           = document.querySelectorAll('.tab');
+    const dropzones      = {
+        folder: document.getElementById('dropzoneFolder'),
+        files:  document.getElementById('dropzoneFiles'),
+        zip:    document.getElementById('dropzoneZip'),
+    };
+    const inputs = {
+        folder: document.getElementById('folderInput'),
+        files:  document.getElementById('filesInput'),
+        zip:    document.getElementById('zipInput'),
+    };
+
+    const submitBtn   = document.getElementById('submitBtn');
+    const clearBtn    = document.getElementById('clearBtn');
+    const startBtn    = document.getElementById('startBtn');
+    const form        = document.getElementById('uploadForm');
+    const progressEl  = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const statusEl    = document.getElementById('status');
+
+    let mode = 'folder';
+    let selectedFiles = [];
+
+    function switchMode(newMode) {
+        mode = newMode;
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.mode === newMode));
+        Object.entries(dropzones).forEach(([key, el]) => {
+            el.style.display = (key === newMode) ? '' : 'none';
+        });
+        selectedFiles = [];
+        inputs[newMode].value = '';
+        updateSubmitState();
+        clearStatus();
+        hideStartBtn();
+    }
+
+    tabs.forEach(tab => tab.addEventListener('click', () => switchMode(tab.dataset.mode)));
+
+    function addFiles(files) {
+        for (const f of files) {
+            const key = f.webkitRelativePath || f.name;
+            const dup = selectedFiles.some(
+                x => (x.webkitRelativePath || x.name) === key
+            );
+            if (!dup) selectedFiles.push(f);
+        }
+        updateSubmitState();
+    }
+
+    function updateSubmitState() {
+        submitBtn.disabled = selectedFiles.length === 0;
+    }
+
+    function clearStatus() {
+        statusEl.className = 'status';
+        statusEl.textContent = '';
+        progressEl.classList.remove('active');
+        progressBar.style.width = '0%';
+    }
+
+    function showStartBtn() { startBtn.classList.remove('hidden'); }
+    function hideStartBtn() { startBtn.classList.add('hidden'); }
+
+    // Drag & drop — только на активном dropzone
+    Object.values(dropzones).forEach(dz => {
+        ['dragenter', 'dragover'].forEach(ev =>
+            dz.addEventListener(ev, e => {
+                e.preventDefault(); e.stopPropagation();
+                dz.classList.add('dragover');
+            })
+        );
+        ['dragleave', 'drop'].forEach(ev =>
+            dz.addEventListener(ev, e => {
+                e.preventDefault(); e.stopPropagation();
+                dz.classList.remove('dragover');
+            })
+        );
+        dz.addEventListener('drop', async e => {
+            if (!e.dataTransfer) return;
+
+            const items = e.dataTransfer.items;
+            if (mode === 'folder' && items && items.length && items[0].webkitGetAsEntry) {
+                const collected = [];
+                const entries = [];
+                for (const it of items) {
+                    const entry = it.webkitGetAsEntry();
+                    if (entry) entries.push(entry);
+                }
+                for (const entry of entries) {
+                    await walkEntry(entry, '', collected);
+                }
+                if (collected.length) { addFiles(collected); return; }
+            }
+            if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+        });
+    });
+
+    // Рекурсивный обход папки, брошенной в dropzone
+    function walkEntry(entry, path, out) {
+        return new Promise(resolve => {
+            if (entry.isFile) {
+                entry.file(f => {
+                    const relPath = path ? `${path}/${f.name}` : f.name;
+                    try {
+                        Object.defineProperty(f, 'webkitRelativePath', {
+                            value: relPath, configurable: true
+                        });
+                    } catch (_) {}
+                    out.push(f);
+                    resolve();
+                }, () => resolve());
+            } else if (entry.isDirectory) {
+                const reader = entry.createReader();
+                const subPath = path ? `${path}/${entry.name}` : entry.name;
+                const readBatch = () => {
+                    reader.readEntries(async entries => {
+                        if (!entries.length) { resolve(); return; }
+                        for (const e of entries) {
+                            await walkEntry(e, subPath, out);
+                        }
+                        readBatch();
+                    }, () => resolve());
+                };
+                readBatch();
+            } else {
+                resolve();
+            }
+        });
+    }
+
+    // Для обычных input'ов
+    inputs.folder.addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+    inputs.files.addEventListener('change',  e => { addFiles(e.target.files); e.target.value = ''; });
+    inputs.zip.addEventListener('change',    e => { addFiles(e.target.files); e.target.value = ''; });
+
+    clearBtn.addEventListener('click', () => {
+        selectedFiles = [];
+        inputs[mode].value = '';
+        updateSubmitState();
+        clearStatus();
+        hideStartBtn();
+    });
+
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        if (!selectedFiles.length) return;
+
+        const fd = new FormData();
+        selectedFiles.forEach(f => {
+            const relPath = f.webkitRelativePath || f.name;
+            fd.append('files', f, relPath);
+        });
+        fd.append('mode', mode);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/upload', true);
+
+        clearStatus();
+        hideStartBtn();
+        progressEl.classList.add('active');
+        submitBtn.disabled = true;
+
+        xhr.upload.onprogress = ev => {
+            if (ev.lengthComputable) {
+                progressBar.style.width = (ev.loaded / ev.total) * 100 + '%';
+            }
+        };
+
+        xhr.onload = () => {
+            submitBtn.disabled = false;
+            progressEl.classList.remove('active');
+            statusEl.classList.add('active');
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                statusEl.classList.add('ok');
+                // Никаких счётчиков — только нейтральный текст.
+                statusEl.textContent = 'Загрузка завершена';
+                showStartBtn();
+            } else {
+                let resp;
+                try { resp = JSON.parse(xhr.responseText); }
+                catch { resp = {}; }
+                statusEl.classList.add('err');
+                statusEl.textContent = resp.error || 'Ошибка загрузки';
+            }
+        };
+
+        xhr.onerror = () => {
+            submitBtn.disabled = false;
+            progressEl.classList.remove('active');
+            statusEl.classList.add('active', 'err');
+            statusEl.textContent = 'Ошибка сети';
+        };
+
+        xhr.send(fd);
+    });
+</script>
+</body>
+</html>

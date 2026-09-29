@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Анализ оси позвоночника</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>Анализ оси позвоночника</h1>
+  </header>
+
+  <main>
+    <!-- ================= Панель управления ================= -->
+    <aside class="panel">
+      <form id="analyze-form">
+        <label>
+          Изображение (png/jpg/tif)
+          <input type="file" name="image" accept="image/*" required>
+        </label>
+
+        <label>
+          Маска LabelMe (JSON)
+          <input type="file" name="mask" accept=".json,application/json" required>
+        </label>
+
+        <fieldset>
+          <legend>Параметры</legend>
+
+          <label>
+            Окно сглаживания: <output id="out-smooth">50</output>
+            <input type="range" name="smooth_window" min="3" max="301" step="2" value="50"
+                   oninput="document.getElementById('out-smooth').value=this.value">
+          </label>
+
+          <label>
+            Обрезка краёв: <output id="out-trim">0.05</output>
+            <input type="range" name="trim_ratio" min="0" max="0.4" step="0.01" value="0.05"
+                   oninput="document.getElementById('out-trim').value=this.value">
+          </label>
+
+          <label>
+            Шаг по Y, px
+            <input type="number" name="step_y" min="0.5" max="10" step="0.5" value="1">
+          </label>
+        </fieldset>
+
+        <button type="submit" id="btn-run">Анализировать</button>
+        <button type="button" id="btn-reset" class="ghost">Сброс</button>
+      </form>
+
+      <div id="status" class="status"></div>
+
+      <div id="metrics" class="metrics hidden">
+        <h3>Результат</h3>
+        <table>
+          <tr><td>Угол (сглаж.)</td><td><b id="m-angle">—</b></td></tr>
+          <tr><td>Угол (raw)</td>   <td id="m-angle-raw">—</td></tr>
+          <tr><td>k (наклон)</td>   <td id="m-k">—</td></tr>
+          <tr><td>Размер</td>       <td id="m-size">—</td></tr>
+        </table>
+      </div>
+    </aside>
+
+    <!-- ================= Визуализация ================= -->
+    <section class="viewer">
+      <div class="toolbar">
+        <label><input type="checkbox" id="cb-lines"  checked> Границы (1/2)</label>
+        <label><input type="checkbox" id="cb-trim"   checked> Обрезанные</label>
+        <label><input type="checkbox" id="cb-raw"    checked> Средняя (raw)</label>
+        <label><input type="checkbox" id="cb-smooth" checked> Средняя (сглаж.)</label>
+        <label><input type="checkbox" id="cb-fit"    checked> МНК-прямая</label>
+        <label><input type="checkbox" id="cb-contour" checked> Контур</label>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="cv"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

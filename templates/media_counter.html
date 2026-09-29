@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Счётчик файлов</title>
+    <style>
+        :root {
+            --bg:        #0f1115;
+            --bg-elev:   #171a21;
+            --border:    #262b36;
+            --text:      #e6e9ef;
+            --text-dim:  #8b93a7;
+            --accent:    #4f8cff;
+            --accent-2:  #7aa8ff;
+            --success:   #3ecf8e;
+            --danger:    #ff6b6b;
+            --radius:    14px;
+            --shadow:    0 10px 30px rgba(0,0,0,.35);
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+            background:
+                radial-gradient(1200px 600px at 20% -10%, rgba(79,140,255,.15), transparent 60%),
+                radial-gradient(900px 500px at 100% 100%, rgba(62,207,142,.08), transparent 60%),
+                var(--bg);
+            color: var(--text);
+            display: grid;
+            place-items: center;
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .card {
+            width: min(720px, 100%);
+            background: linear-gradient(180deg, var(--bg-elev), #12151c);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 32px;
+            animation: rise .5s cubic-bezier(.2,.7,.2,1) both;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .badge {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--accent), #2f6bd8);
+            box-shadow: 0 6px 20px rgba(79,140,255,.35);
+            flex-shrink: 0;
+        }
+
+        .badge svg { width: 22px; height: 22px; }
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -.01em;
+        }
+
+        .subtitle {
+            margin: 2px 0 0;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .counter {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            padding: 20px 22px;
+            background: rgba(255,255,255,.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .counter-value {
+            font-variant-numeric: tabular-nums;
+            font-size: 40px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, var(--accent-2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1;
+        }
+
+        .counter-label {
+            color: var(--text-dim);
+            font-size: 14px;
+        }
+
+        .actions { display: flex; gap: 12px; align-items: center; }
+
+        button {
+            font: inherit;
+            font-weight: 600;
+            font-size: 15px;
+            color: #fff;
+            background: linear-gradient(180deg, var(--accent), #3a76e0);
+            border: 1px solid #2f6bd8;
+            border-radius: 10px;
+            padding: 12px 22px;
+            cursor: pointer;
+            transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
+            box-shadow: 0 8px 24px rgba(79,140,255,.35), inset 0 1px 0 rgba(255,255,255,.15);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button:hover:not(:disabled) { filter: brightness(1.08); }
+        button:active:not(:disabled) { transform: translateY(1px); }
+        button:disabled {
+            cursor: not-allowed;
+            filter: grayscale(.4) brightness(.8);
+            box-shadow: none;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            display: none;
+        }
+        button.loading .spinner { display: inline-block; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .log-wrap {
+            margin-top: 22px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #0b0d12;
+            overflow: hidden;
+            transition: border-color .2s ease;
+        }
+
+        .log-wrap.success { border-color: rgba(62,207,142,.5); }
+        .log-wrap.error   { border-color: rgba(255,107,107,.5); }
+
+        .log-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,.02);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+        }
+
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--text-dim);
+            transition: background .2s ease;
+        }
+        .log-wrap.success .dot { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .log-wrap.error   .dot { background: var(--danger);  box-shadow: 0 0 8px var(--danger); }
+
+        pre#log {
+            margin: 0;
+            padding: 16px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.55;
+            color: #cfd6e4;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 60px;
+            max-height: 320px;
+            overflow: auto;
+        }
+
+        pre#log:empty::before {
+            content: "Здесь появится результат…";
+            color: var(--text-dim);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <div class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Счётчик файлов</h1>
+                <p class="subtitle">DICOM · отчёты · обработка</p>
+            </div>
+        </div>
+
+        <div class="counter">
+            <div class="counter-value">{{ total_files }}</div>
+            <div class="counter-label">файлов найдено в директории</div>
+        </div>
+
+        <div class="actions">
+            <button id="start-btn">
+                <span class="spinner"></span>
+                <span class="label">Запустить обработку</span>
+            </button>
+        </div>
+
+        <div class="log-wrap" id="log-wrap">
+            <div class="log-head">
+                <span class="dot"></span>
+                <span>Результат</span>
+            </div>
+            <pre id="log"></pre>
+        </div>
+    </div>
+
+    <script>
+        const btn     = document.getElementById('start-btn');
+        const log     = document.getElementById('log');
+        const logWrap = document.getElementById('log-wrap');
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btn.querySelector('.label').textContent = 'Обработка…';
+            logWrap.classList.remove('success', 'error');
+            log.textContent = '';
+
+            try {
+                const resp = await fetch('/media-counter/start', { method: 'POST' });
+
+                if (!resp.ok) {
+                    const text = await resp.text();
+                    throw new Error(`HTTP ${resp.status}: ${text.slice(0, 300)}`);
+                }
+
+                const data = await resp.json();
+                log.textContent = JSON.stringify(data, null, 2);
+                logWrap.classList.add('success');
+
+                // через 0.5 сек — переход на страницу отчётов
+                setTimeout(() => {
+                    window.location.href = '/reports/view';
+                }, 500);
+
+            } catch (e) {
+                log.textContent = 'Ошибка: ' + e.message;
+                logWrap.classList.add('error');
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                btn.querySelector('.label').textContent = 'Запустить обработку';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Примеры отчётов</title>
+    <style>
+        :root {
+            --bg:        #0f1115;
+            --bg-elev:   #171a21;
+            --border:    #262b36;
+            --text:      #e6e9ef;
+            --text-dim:  #8b93a7;
+            --accent:    #4f8cff;
+            --accent-2:  #7aa8ff;
+            --success:   #3ecf8e;
+            --warning:   #f2c94c;
+            --danger:    #ff6b6b;
+            --radius:    14px;
+            --shadow:    0 10px 30px rgba(0,0,0,.35);
+        }
+
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; min-height: 100%; }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, sans-serif;
+            background:
+                radial-gradient(1200px 600px at 20% -10%, rgba(79,140,255,.15), transparent 60%),
+                radial-gradient(900px 500px at 100% 100%, rgba(62,207,142,.08), transparent 60%),
+                var(--bg);
+            color: var(--text);
+            padding: 40px 20px 80px;
+            line-height: 1.5;
+        }
+
+        .container { width: min(1080px, 100%); margin: 0 auto; }
+
+        .header {
+            display: flex; align-items: center; gap: 16px;
+            margin-bottom: 32px;
+        }
+        .badge {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--accent), #2f6bd8);
+            box-shadow: 0 6px 20px rgba(79,140,255,.35);
+            flex-shrink: 0;
+        }
+        .badge svg { width: 22px; height: 22px; }
+        h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+        .subtitle { margin: 2px 0 0; font-size: 13px; color: var(--text-dim); }
+
+        .back-link {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--text-dim);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.02);
+            transition: color .2s, border-color .2s;
+        }
+        .back-link:hover { color: var(--text); border-color: #3a4354; }
+
+        .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--text-dim);
+            margin: 40px 0 16px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title::before {
+            content: ""; width: 4px; height: 14px; border-radius: 2px;
+            background: linear-gradient(180deg, var(--accent), #2f6bd8);
+        }
+
+        .report {
+            background: linear-gradient(180deg, var(--bg-elev), #12151c);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .report-head {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,.02);
+            flex-wrap: wrap;
+        }
+
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            flex-shrink: 0;
+        }
+        .status-dot.pending { background: var(--warning); box-shadow: 0 0 10px var(--warning); }
+        .status-dot.error   { background: var(--danger);  box-shadow: 0 0 10px var(--danger); }
+
+        .report-title {
+            font-weight: 600; font-size: 15px;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .report-sub {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 12px; color: var(--text-dim);
+        }
+
+        .tag {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,.02);
+            color: var(--text-dim);
+        }
+        .tag.ok      { color: var(--success); border-color: rgba(62,207,142,.4); background: rgba(62,207,142,.08); }
+        .tag.pending { color: var(--warning); border-color: rgba(242,201,76,.4); background: rgba(242,201,76,.08); }
+        .tag.error   { color: var(--danger);  border-color: rgba(255,107,107,.4); background: rgba(255,107,107,.08); }
+        .tag.area    { color: var(--accent-2); border-color: rgba(79,140,255,.4); background: rgba(79,140,255,.08); }
+
+        .report-head .meta { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .report-body {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+        @media (max-width: 860px) {
+            .report-body { grid-template-columns: 1fr; }
+        }
+
+        .images { display: grid; gap: 12px; }
+        .image-box {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: #0b0d12;
+        }
+        .image-box img { display: block; width: 100%; height: auto; }
+        .image-box .caption {
+            padding: 8px 12px;
+            font-size: 12px;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+            background: rgba(255,255,255,.02);
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px 16px;
+            font-size: 13px;
+        }
+        .kv .key { color: var(--text-dim); }
+        .kv .val {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: var(--text);
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+        .kv .val.empty  { color: #4d5464; font-style: italic; }
+        .kv .val.true   { color: var(--success); }
+        .kv .val.false  { color: var(--danger); }
+
+        .block-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--text-dim);
+            margin: 0 0 10px;
+        }
+
+        .steps { display: grid; gap: 8px; }
+        .step {
+            display: grid;
+            grid-template-columns: 130px 1fr auto;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .step .sname {
+            color: var(--text-dim);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .step .bar {
+            height: 6px;
+            background: rgba(255,255,255,.04);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .step .bar > span {
+            display: block; height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            border-radius: 999px;
+        }
+        .step .t {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            color: var(--text);
+            min-width: 50px;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header">
+            <div class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3v18h18"/>
+                    <path d="M7 15l4-4 3 3 5-6"/>
+                </svg>
+            </div>
+            <div>
+                <h1>Примеры отчётов</h1>
+                <p class="subtitle">Расшифровка результатов обработки</p>
+            </div>
+            <a href="/reports/view" class="back-link">← К отчётам</a>
+        </div>
+
+        {# ═══════════════ SPINE ═══════════════ #}
+        <div class="section-title">Позвоночник · spine</div>
+
+        <div class="report">
+            <div class="report-head">
+                <span class="status-dot"></span>
+                <div>
+                    <div class="report-title">2.25.66397484472966116002950503539482860450</div>
+                    <div class="report-sub">axes.png</div>
+                </div>
+                <div class="meta">
+                    <span class="tag area">spine</span>
+                    <span class="tag ok">ok</span>
+                    <span class="tag">4.41 s</span>
+                </div>
+            </div>
+
+            <div class="report-body">
+                <div class="images">
+                    <div class="image-box">
+                        <img src="static/examples/axes.png" alt="Ось позвоночника">
+                        <div class="caption">Ось позвоночника</div>
+                    </div>
+                    <div class="image-box">
+                        <img src="static/examples/artefacts.png" alt="Артефакты">
+                        <div class="caption">Выделенные артефакты</div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="block-title">Параметры позвоночника</p>
+                    <div class="kv">
+                        <span class="key">Угол, °</span>       <span class="val">0.95</span>
+                        <span class="key">Позиция</span>       <span class="val true">корректна</span>
+                        <span class="key">Центрирование</span> <span class="val true">смещено</span>
+                        <span class="key">Артефакты</span>     <span class="val false">обнаружены</span>
+                        <span class="key">ТАЗ</span>           <span class="val true">есть</span>
+                        <span class="key">Pozv</span>          <span class="val">9</span>
+                    </div>
+
+                    <p class="block-title" style="margin-top:20px">Этапы обработки</p>
+                    <div class="steps">
+                        <div class="step"><span class="sname">segmentation</span>    <span class="bar"><span style="width:44%"></span></span><span class="t">1.922s</span></div>
+                        <div class="step"><span class="sname">remove_spine</span>    <span class="bar"><span style="width:23%"></span></span><span class="t">1.025s</span></div>
+                        <div class="step"><span class="sname">estimate_angle</span>  <span class="bar"><span style="width:30%"></span></span><span class="t">1.325s</span></div>
+                        <div class="step"><span class="sname">detect_artifacts</span><span class="bar"><span style="width:2%"></span></span><span class="t">0.059s</span></div>
+                        <div class="step"><span class="sname">check_centering</span> <span class="bar"><span style="width:1%"></span></span><span class="t">0.043s</span></div>
+                        <div class="step"><span class="sname">check_position</span>  <span class="bar"><span style="width:1%"></span></span><span class="t">0.036s</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="report">
+            <div class="report-head">
+                <span class="status-dot"></span>
+                <div>
+                    <div class="report-title">2.25.66397484472966116002950503539482860450</div>
+                    <div class="report-sub">artefacts.png</div>
+                </div>
+                <div class="meta">
+                    <span class="tag area">spine</span>
+                    <span class="tag ok">ok</span>
+                    <span class="tag">3.80 s</span>
+                </div>
+            </div>
+
+            <div class="report-body">
+                <div class="images">
+                    <div class="image-box">
+                        <img src="/static/examples/axes.png" alt="Ось позвоночника">
+                        <div class="caption">Ось позвоночника</div>
+                    </div>
+                    <div class="image-box">
+                        <img src="/static/examples/artefacts.png" alt="Артефакты">
+                        <div class="caption">Выделенные артефакты</div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="block-title">Параметры позвоночника</p>
+                    <div class="kv">
+                        <span class="key">Угол, °</span>       <span class="val">1.14</span>
+                        <span class="key">Позиция</span>       <span class="val true">корректна</span>
+                        <span class="key">Центрирование</span> <span class="val false">в норме</span>
+                        <span class="key">Артефакты</span>     <span class="val false">отсутствуют</span>
+                        <span class="key">ТАЗ</span>           <span class="val true">есть</span>
+                        <span class="key">Pozv</span>          <span class="val">11</span>
+                    </div>
+
+                    <p class="block-title" style="margin-top:20px">Этапы обработки</p>
+                    <div class="steps">
+                        <div class="step"><span class="sname">segmentation</span>    <span class="bar"><span style="width:47%"></span></span><span class="t">1.780s</span></div>
+                        <div class="step"><span class="sname">remove_spine</span>    <span class="bar"><span style="width:24%"></span></span><span class="t">0.910s</span></div>
+                        <div class="step"><span class="sname">estimate_angle</span>  <span class="bar"><span style="width:26%"></span></span><span class="t">0.980s</span></div>
+                        <div class="step"><span class="sname">detect_artifacts</span><span class="bar"><span style="width:2%"></span></span><span class="t">0.070s</span></div>
+                        <div class="step"><span class="sname">check_centering</span> <span class="bar"><span style="width:1%"></span></span><span class="t">0.030s</span></div>
+                        <div class="step"><span class="sname">check_position</span>  <span class="bar"><span style="width:1%"></span></span><span class="t">0.030s</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ═══════════════ SUSTAV ═══════════════ #}
+        <div class="section-title">Сустав · sustav</div>
+
+        <div class="report">
+            <div class="report-head">
+                <span class="status-dot pending"></span>
+                <div>
+                    <div class="report-title">2.25.66397484472966116002950503539482860450</div>
+                    <div class="report-sub">position.png</div>
+                </div>
+                <div class="meta">
+                    <span class="tag area">sustav</span>
+                </div>
+            </div>
+
+            <div class="report-body">
+                <div class="images">
+                    <div class="image-box">
+                        <img src="/static/examples/position.png" alt="Ротация">
+                        <div class="caption">Ротация</div>
+                    </div>
+                    <div class="image-box">
+                        <img src="/static/examples/rotation.png" alt="Расстояние до краёв">
+                        <div class="caption">Расстояние до краёв</div>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="block-title">Параметры сустава</p>
+                    <div class="kv">
+                        <span class="key">Позиция</span> <span class="val true">корректна</span>
+                        <span class="key">Сторона</span> <span class="val">левая</span>
+                        <span class="key">Ротация</span> <span class="val">внутренняя</span>
+                    </div>
+
+                    <p class="block-title" style="margin-top:20px">Этапы обработки</p>
+                    <div class="steps">
+                        <div class="step"><span class="sname">classify</span><span class="bar"><span style="width:100%"></span></span><span class="t">0.148s</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

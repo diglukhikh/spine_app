@@ -1,0 +1,27 @@
+{
+    "research_name": "2.25.66397484472966116002950503539482860450",
+    "image_name": "CR000004.jpg",
+    "area": "spine",
+    "position_correct": true,
+    "center_offset": true,
+    "artifacts_present": [
+        true
+    ],
+    "spine_angle": 0.9451526469060996,
+    "sust_posit": "",
+    "sust_rotation_std": "",
+    "sust_side": "",
+    "taz": true,
+    "pozv": 9,
+    "processing_time_sec": 4.41,
+    "steps_time_sec": {
+        "check_centering": 0.043,
+        "segmentation": 1.922,
+        "estimate_angle": 1.325,
+        "remove_spine": 1.025,
+        "detect_artifacts": 0.059,
+        "check_position": 0.036
+    },
+    "errors": [],
+    "status": "ok"
+}

@@ -1,0 +1,20 @@
+{
+    "research_name": "2.25.66397484472966116002950503539482860450",
+    "image_name": "CR000000.jpg",
+    "area": "sustav",
+    "position_correct": null,
+    "center_offset": null,
+    "artifacts_present": "",
+    "spine_angle": null,
+    "sust_posit": true,
+    "sust_rotation_std": "vnutr rotation",
+    "sust_side": "left",
+    "taz": "",
+    "pozv": "",
+    "processing_time_sec": null,
+    "steps_time_sec": {
+        "classify": 0.148
+    },
+    "errors": [],
+    "status": "pending"
+}
