@@ -82,21 +82,77 @@
         .status.active { display: block; }
         .status.ok { color: #059669; }
         .status.err { color: #dc2626; }
+
+
+
+      .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+    }
+
+    .page-head .hint {
+        margin: 6px 0 0;
+    }
+
+    .btn-reports {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid #d0d5dd;
+        background: #fff;
+        color: #344054;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn-reports:hover {
+        background: #f9fafb;
+        border-color: #98a2b3;
+    }
+
+    .btn-reports .icon {
+        width: 18px;
+        height: 18px;
+    }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Загрузка DICOM</h1>
-    <p class="hint">
-        Выберите папку с DICOM-файлами, отдельные файлы или ZIP-архив.
-        Всё обрабатывается во временной папке и не сохраняется.
-    </p>
+    <div class="page-head">
+    <div>
+        <h1>Загрузка DICOM</h1>
+        <p class="hint">
+            Выберите папку с DICOM-файлами, отдельные файлы или ZIP-архив.
 
-    <div class="tabs">
-        <div class="tab active" data-mode="folder">📁 Папка</div>
-        <div class="tab" data-mode="files">📄 Файлы</div>
-        <div class="tab" data-mode="zip">🗜️ ZIP-архив</div>
+        </p>
     </div>
+
+    <a href="/reports/view" class="btn-reports">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6"/>
+            <path d="M8 13h8"/>
+            <path d="M8 17h5"/>
+        </svg>
+        <span class="label">К отчётам</span>
+    </a>
+</div>
+
+<div class="tabs">
+    <div class="tab active" data-mode="folder">📁 Папка</div>
+    <div class="tab" data-mode="files">📄 Файлы</div>
+    <div class="tab" data-mode="zip">🗜️ ZIP-архив</div>
+</div>
 
     <form id="uploadForm" method="POST" enctype="multipart/form-data">
         <!-- Выбор папки -->

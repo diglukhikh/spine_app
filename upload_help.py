@@ -56,35 +56,48 @@ def apply_window(img, center, width):
 
 
 def dicom_to_jpeg(dcm_path, jpg_path, sharpness_factor=3.0):
+
+
+
     ds = pydicom.dcmread(dcm_path)
     img = ds.pixel_array
 
-    slope = float(getattr(ds, "RescaleSlope", 1))
-    intercept = float(getattr(ds, "RescaleIntercept", 0))
-    img = img * slope + intercept
+    # Приводим к 8 битам
+    if img.dtype != np.uint8:
+        img = ((img - img.min()) / (img.max() - img.min() + 1e-9) * 255).astype(np.uint8)
 
-    center = getattr(ds, "WindowCenter", None)
-    width  = getattr(ds, "WindowWidth", None)
+    pil_img = Image.fromarray(img, mode="L")
 
-    if center is not None and width is not None:
-        if isinstance(center, pydicom.multival.MultiValue):
-            center = center[0]
-        if isinstance(width, pydicom.multival.MultiValue):
-            width = width[0]
-        img8 = apply_window(img, float(center), float(width))
-    else:
-        img8 = ((img - img.min()) / (img.max() - img.min() + 1e-9) * 255).astype(np.uint8)
+    # Резкость — после масштабирования
+    if sharpness_factor != 1.0:
+        pil_img = ImageEnhance.Sharpness(pil_img).enhance(sharpness_factor)
 
-    if getattr(ds, "PhotometricInterpretation", "") == "MONOCHROME1":
-        img8 = 255 - img8
-
-    pil_img = Image.fromarray(img8, mode="L")
-    enhancer = ImageEnhance.Sharpness(pil_img)
-    sharpened_img = enhancer.enhance(sharpness_factor)
+    # slope = float(getattr(ds, "RescaleSlope", 1))
+    # intercept = float(getattr(ds, "RescaleIntercept", 0))
+    # img = img * slope + intercept
+    #
+    # center = getattr(ds, "WindowCenter", None)
+    # width  = getattr(ds, "WindowWidth", None)
+    #
+    # if center is not None and width is not None:
+    #     if isinstance(center, pydicom.multival.MultiValue):
+    #         center = center[0]
+    #     if isinstance(width, pydicom.multival.MultiValue):
+    #         width = width[0]
+    #     img8 = apply_window(img, float(center), float(width))
+    # else:
+    #     img8 = ((img - img.min()) / (img.max() - img.min() + 1e-9) * 255).astype(np.uint8)
+    #
+    # if getattr(ds, "PhotometricInterpretation", "") == "MONOCHROME1":
+    #     img8 = 255 - img8
+    #
+    # pil_img = Image.fromarray(img8, mode="L")
+    # enhancer = ImageEnhance.Sharpness(pil_img)
+    # sharpened_img = enhancer.enhance(sharpness_factor)
 
     # гарантируем, что папка под jpg существует
     Path(jpg_path).parent.mkdir(parents=True, exist_ok=True)
-    sharpened_img.save(jpg_path, "JPEG", quality=95)
+    pil_img.save(jpg_path, "JPEG", quality=95)
 
 
 # ---------- Совмещённая обработка папки ----------

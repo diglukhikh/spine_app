@@ -1,11 +1,10 @@
 import json
 import cv2
 import numpy as np
-import torch
 from mobile_sam import sam_model_registry, SamPredictor
 
 
-class SpineSegmenter:
+class SustavSegmenter:
     def __init__(self, checkpoint: str, device: str = "cpu"):
         self.device = device
         self.sam = sam_model_registry["vit_t"](checkpoint=checkpoint).to(device)

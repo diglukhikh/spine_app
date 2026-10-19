@@ -56,6 +56,7 @@ COPY examples/ ./examples/
 COPY operation/ ./operation/
 COPY output/ ./output/
 COPY result/ ./result/
+COPY results/ ./results/
 COPY sustavess/ ./sustavess/
 COPY up_dicom/ ./up_dicom/
 COPY upload_dicom/ ./upload_dicom/
@@ -64,6 +65,8 @@ COPY vertebrae_debug/ ./vertebrae_debug/
 COPY templates/ ./templates/
 COPY static/ ./static/
 COPY sam/ ./sam/
+COPY operation/ ./operation/
+COPY rotation_chek/ ./rotation_chek/
 
 EXPOSE 5000
 CMD ["gunicorn", "-w", "1", "-k", "gevent", "-b", "0.0.0.0:5000", "main_app:app"]

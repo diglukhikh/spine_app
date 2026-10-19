@@ -210,52 +210,52 @@ class BlackPointsDetector:
     # # ------------------------------------------------------------------
     # # Опциональная визуализация
     # # ------------------------------------------------------------------
-    # def visualize(self, save_path='black_points_under_com.png', show=True):
-    #     """Визуализация результата (требует matplotlib)."""
-    #     try:
-    #         import matplotlib.pyplot as plt
-    #     except ImportError:
-    #         print("matplotlib не установлен")
-    #         return
-    #
-    #     if self.blacks is None:
-    #         self.get_points()
-    #
-    #     fig, ax = plt.subplots(figsize=(8, 10))
-    #     ax.imshow(self.arr, cmap='gray')
-    #
-    #     # Центр масс
-    #     ax.plot(self.cx, self.cy, 'o', markersize=12, markerfacecolor='none',
-    #             markeredgecolor='lime', markeredgewidth=2)
-    #     ax.plot(self.cx, self.cy, '+', color='lime', markersize=15,
-    #             markeredgewidth=2)
-    #
-    #     # Вертикаль через центр масс
-    #     ax.axvline(self.cx, color='lime', lw=0.8, linestyle=':', alpha=0.7)
-    #
-    #     # Горизонтальная линия среза верхних 30%
-    #     ax.axhline(self.y_cut, color='yellow', lw=1, linestyle='--')
-    #
-    #     # Чёрные точки
-    #     for i, p in enumerate(new_points, 1):
-    #         ax.plot(p['x'], p['y'], 'o', markersize=10,
-    #                 markerfacecolor='red', markeredgecolor='white',
-    #                 markeredgewidth=1.5)
-    #         ax.text(p['x'] + 5, p['y'], f'{i}',
-    #                 color='red', fontsize=12, fontweight='bold')
-    #
-    #     # Отрезки между точками
-    #     for i in range(len(self.blacks) - 1):
-    #         ax.plot([self.blacks[i]['x'], self.blacks[i + 1]['x']],
-    #                 [self.blacks[i]['y'], self.blacks[i + 1]['y']],
-    #                 color='red', lw=1.2, alpha=0.7)
-    #
-    #     ax.invert_yaxis()
-    #     ax.set_title('Центр масс (зелёный) и чёрные точки под ним (красные)')
-    #     plt.tight_layout()
-    #     plt.savefig(save_path, dpi=120)
-    #     if show:
-    #         plt.show()
+    def visualize(self, new_points, save_path='black_points_under_com.png', show=True):
+        """Визуализация результата (требует matplotlib)."""
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            print("matplotlib не установлен")
+            return
+
+        if self.blacks is None:
+            self.get_points()
+
+        fig, ax = plt.subplots(figsize=(8, 10))
+        ax.imshow(self.arr, cmap='gray')
+
+        # Центр масс
+        ax.plot(self.cx, self.cy, 'o', markersize=12, markerfacecolor='none',
+                markeredgecolor='lime', markeredgewidth=2)
+        ax.plot(self.cx, self.cy, '+', color='lime', markersize=15,
+                markeredgewidth=2)
+
+        # Вертикаль через центр масс
+        ax.axvline(self.cx, color='lime', lw=0.8, linestyle=':', alpha=0.7)
+
+        # Горизонтальная линия среза верхних 30%
+        ax.axhline(self.y_cut, color='yellow', lw=1, linestyle='--')
+
+        # Чёрные точки
+        for i, p in enumerate(new_points, 1):
+            ax.plot(p['x'], p['y'], 'o', markersize=10,
+                    markerfacecolor='red', markeredgecolor='white',
+                    markeredgewidth=1.5)
+            ax.text(p['x'] + 5, p['y'], f'{i}',
+                    color='red', fontsize=12, fontweight='bold')
+
+        # Отрезки между точками
+        for i in range(len(self.blacks) - 1):
+            ax.plot([self.blacks[i]['x'], self.blacks[i + 1]['x']],
+                    [self.blacks[i]['y'], self.blacks[i + 1]['y']],
+                    color='red', lw=1.2, alpha=0.7)
+
+        ax.invert_yaxis()
+        ax.set_title('Центр масс (зелёный) и чёрные точки под ним (красные)')
+        plt.tight_layout()
+        plt.savefig(save_path, dpi=120)
+        if show:
+            plt.show()
 
 
 # ----------------------------------------------------------------------

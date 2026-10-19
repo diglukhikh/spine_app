@@ -12,14 +12,14 @@ PIXEL_X_MM = 0.60
 PIXEL_Y_MM = 1.05
 
 TOP_LIMIT_MM = 30.0
-BOTTOM_LIMIT_MM = 30.0
+BOTTOM_LIMIT_MM = 40.0
 LATERAL_LIMIT_MM = 20.0
 
 BOTTOM_BAND_PX = 8
 BRANCH_STOP_Y = 0.15
 
 ISCHIAL_Y_MIN = 0.45
-ISCHIAL_Y_MAX = 0.82
+ISCHIAL_Y_MAX = 0.92
 ISCHIAL_PROMINENCE = 8.0
 
 
@@ -234,7 +234,7 @@ def visualize(image, polygon, points, d, checks):
     green = (0, 255, 0)
     red = (0, 0, 255)
 
-    cv2.putText(vis, f"SIDE: {'LEFT' if side == 'L' else 'RIGHT'}", (5, 20), font, .55, white, 2, cv2.LINE_AA)
+    cv2.putText(vis, f"SIDE: {'RIGHT' if side == 'L' else 'LEFT'}", (5, 20), font, .55, white, 2, cv2.LINE_AA)
     cv2.putText(vis, f"TOP: {d['top_mm']:.1f} mm", (5, 42), font, .55, green if checks[0] else red, 2, cv2.LINE_AA)
     cv2.putText(vis, f"BOTTOM: {d['bottom_mm']:.1f} mm", (5, 64), font, .55, green if checks[1] else red, 2, cv2.LINE_AA)
     cv2.putText(vis, f"LATERAL: {d['lateral_mm']:.1f} mm", (5, 86), font, .55, green if checks[2] else red, 2, cv2.LINE_AA)
@@ -256,14 +256,14 @@ def process(image_path, json_path):
     points = detect_points(polygon, h)
     distances = measure(points, h, w)
     checks = check(distances)
-    name, study = _split_path(image_path)
-    out_image = os.path.join("sustavess", f"{study}_{name}.jpg")
-    # out_image = (f"{image_path}_result.jpg")
-    vis = visualize(image, polygon, points, distances, checks)
-    cv2.imwrite(str(out_image), vis, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    # name, study = _split_path(image_path)
+    # out_image = os.path.join("sustavess", f"{study}_{name}.jpg")
+    # out_image = (f"{image_path}_result_position.jpg")
+    # vis = visualize(image, polygon, points, distances, checks)
+    # cv2.imwrite(str(out_image), vis, [cv2.IMWRITE_JPEG_QUALITY, 90])
 
     report = {
-        "side": "left" if points["side"] == "L" else "right",
+        "side": "right" if points["side"] == "L" else "left",
         "points": {
             "greater_trochanter": [float(x) for x in points["top"]],
             "trochanter_lateral": [float(x) for x in points["lateral"]],
@@ -281,13 +281,13 @@ def process(image_path, json_path):
 def main(image, json):
     report = process(image, json)
     d = report["distances_mm"]
-    print(
-        f"{'LEFT' if report['side'] == 'left' else 'RIGHT'}, "
-        f"TOP={d['top_mm']:.1f} мм, "
-        f"BOTTOM={d['bottom_mm']:.1f} мм, "
-        f"LATERAL={d['lateral_mm']:.1f} мм -> "
-        f"{'CORRECT' if report['correct'] else 'INCORRECT'}"
-    )
+    # print(
+    #     f"{'RIGHT' if report['side'] == 'left' else 'LEFT'}, "
+    #     f"TOP={d['top_mm']:.1f} мм, "
+    #     f"BOTTOM={d['bottom_mm']:.1f} мм, "
+    #     f"LATERAL={d['lateral_mm']:.1f} мм -> "
+    #     f"{'CORRECT' if report['correct'] else 'INCORRECT'}"
+    # )
     return report['correct']
 
 

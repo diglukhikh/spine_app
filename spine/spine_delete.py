@@ -36,9 +36,15 @@ class ObjectRemover:
         pts = contour.reshape(-1, 2).astype(np.float64)
         x, y, w, h = cv2.boundingRect(contour.astype(np.int32))
         cx = x + w / 2.0
-        k = 1.0 + percent / 100.0
+        cy = y + h / 2.0
+
+        kx = 1.0 + percent / 100.0
+        ky = 1.0 + (percent + 20) / 100.0
+
         pts_scaled = pts.copy()
-        pts_scaled[:, 0] = (pts[:, 0] - cx) * k + cx
+        pts_scaled[:, 0] = (pts[:, 0] - cx) * kx + cx
+        pts_scaled[:, 1] = (pts[:, 1] - cy) * ky + cy
+
         return pts_scaled.round().astype(np.int32)
 
     # ---------- загрузка ----------
@@ -48,7 +54,6 @@ class ObjectRemover:
         if not os.path.isfile(self.json_path):
             raise FileNotFoundError(f"Нет файла JSON: {self.json_path}")
 
-        # читаем через numpy + imdecode — работает с любыми путями (кириллица, пробелы)
         with open(self.image_path, "rb") as f:
             buf = np.frombuffer(f.read(), dtype=np.uint8)
         img = cv2.imdecode(buf, cv2.IMREAD_GRAYSCALE)
@@ -85,26 +90,22 @@ class ObjectRemover:
 
     # ---------- сохранение через os ----------
     def _save(self):
-        # создаём папку, если её нет
         os.makedirs(self.output_dir, exist_ok=True)
 
         base_name = os.path.splitext(os.path.basename(self.image_path))[0]
-        file_name = f"{base_name}_without_object_filled.png"
+        file_name = f"{base_name}_without_object_filled.jpg"
         self.output_path = os.path.join(self.output_dir, file_name)
 
-        # кодируем в память
-        ok, buf = cv2.imencode(".png", self.result_filled)
+        ok, buf = cv2.imencode(".jpg", self.result_filled, [cv2.IMWRITE_JPEG_QUALITY, 95])
         if not ok:
-            raise IOError("cv2.imencode не смог закодировать PNG")
+            raise IOError("cv2.imencode не смог закодировать JPG")
 
-        # пишем файл через os (надёжно на любых путях)
         try:
             with open(self.output_path, "wb") as f:
                 f.write(buf.tobytes())
         except OSError as e:
             raise IOError(f"Не удалось записать {self.output_path}: {e}") from e
 
-        # проверяем, что файл реально появился и не пустой
         if not os.path.exists(self.output_path):
             raise IOError(f"Файл не создан: {self.output_path}")
         size = os.path.getsize(self.output_path)
@@ -114,21 +115,59 @@ class ObjectRemover:
         print(f"[ObjectRemover] Сохранено: {self.output_path} ({size} байт)")
         return self.output_path
 
+    # ---------- сохранение только объекта ----------
+    def _save_only_object(self):
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        # находим bounding box по маске
+        ys, xs = np.where(self.mask_inside == 255)
+        if ys.size == 0:
+            raise ValueError("Маска пустая — нечего сохранять")
+        y0, y1 = int(ys.min()), int(ys.max()) + 1
+        x0, x1 = int(xs.min()), int(xs.max()) + 1
+
+        # вырезаем прямоугольный фрагмент по bounding box — без обнуления вне маски
+        crop = self.img[y0:y1, x0:x1]
+
+        base_name = os.path.splitext(os.path.basename(self.image_path))[0]
+        file_name = f"{base_name}_only_object_filled.jpg"
+        output_path = os.path.join(self.output_dir, file_name)
+
+        ok, buf = cv2.imencode(".jpg", crop, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        if not ok:
+            raise IOError("cv2.imencode не смог закодировать JPG")
+
+        try:
+            with open(output_path, "wb") as f:
+                f.write(buf.tobytes())
+        except OSError as e:
+            raise IOError(f"Не удалось записать {output_path}: {e}") from e
+
+        if not os.path.exists(output_path):
+            raise IOError(f"Файл не создан: {output_path}")
+        size = os.path.getsize(output_path)
+        if size == 0:
+            raise IOError(f"Файл пустой: {output_path}")
+
+        print(f"[ObjectRemover] Сохранено (только объект): {output_path} ({size} байт)")
+        return output_path
+
     # ---------- публичный запуск ----------
     def run(self):
         self._load()
         self._build_masks()
         self._process()
-        return self._save()
+        return self._save(), self._save_only_object()
 
 
 # ---------- пример использования ----------
-# if __name__ == "__main__":
-#     remover = ObjectRemover(
-#         image_path="/content/52532.jpg",
-#         json_path="/content/52532.json",
-#         output_dir="/content",       # или любая папка внутри Flask-проекта
-#         expand_percent=30,
-#     )
-#     out = remover.run()
-#     print("Итог:", out)
+if __name__ == "__main__":
+    remover = ObjectRemover(
+        image_path=r"C:\Users\Хозяин\PycharmProjects\bones_hack\spine\CR01770.jpg",
+        json_path=r"C:\Users\Хозяин\PycharmProjects\bones_hack\spine\CR01770.json",
+        output_dir=r"C:\Users\Хозяин\PycharmProjects\bones_hack\spine\test",       # или любая папка внутри Flask-проекта
+        expand_percent=15,
+        output_path=r"C:\Users\Хозяин\PycharmProjects\bones_hack\spine\test",
+    )
+    out, out_spine = remover.run()
+    print("Итог:", out, out_spine)

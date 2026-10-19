@@ -1,7 +1,6 @@
 import json
 import cv2
 import numpy as np
-import torch
 from mobile_sam import sam_model_registry, SamPredictor
 
 

@@ -24,13 +24,14 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, render_template_string
 from flask import Flask, request, jsonify, make_response, send_file
 import pipeline
-import covert_xls
+import excel_import
 import json
 from pathlib import Path
 from collections import defaultdict
+import glob
 
 import find_copy
 import upload_help
@@ -52,8 +53,74 @@ ALLOWED_EXT = {".dcm", ".dicom", ".zip", ""}  # "" — DICOM без расшир
 MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500 МБ
 app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
+JSON_REP_DIR = os.path.join(os.getcwd(), "json_rep")
+ARTEFACTS_IMG_DIR = os.path.join(os.getcwd(), "static", "artefacts_img")
 
 
+def _clear_dir_files(directory: str, extensions: tuple = None) -> int:
+    """Удаляет файлы из папки. Если extensions задан — только с этими расширениями."""
+    if not os.path.isdir(directory):
+        return 0
+
+    removed = 0
+    for name in os.listdir(directory):
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path):
+            continue
+        if extensions is not None and not name.lower().endswith(extensions):
+            continue
+        try:
+            os.remove(path)
+            removed += 1
+        except OSError as e:
+            app.logger.warning("Не удалось удалить %s: %s", path, e)
+    return removed
+
+
+def _clear_dir_all_except(directory: str, keep: tuple = ("__init__.py", "__init__.pyc")) -> int:
+    """Удаляет всё содержимое папки (файлы и подпапки), кроме имён из keep."""
+    if not os.path.isdir(directory):
+        return 0
+
+    keep_lower = {k.lower() for k in keep}
+    removed = 0
+    for name in os.listdir(directory):
+        if name.lower() in keep_lower:
+            continue
+        path = os.path.join(directory, name)
+        try:
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+            removed += 1
+        except OSError as e:
+            app.logger.warning("Не удалось удалить %s: %s", path, e)
+    return removed
+
+
+@app.route("/reports/clear", methods=["POST"])
+def clear_reports():
+    try:
+        json_removed = _clear_dir_files(JSON_REP_DIR, extensions=(".json",))
+        img_removed = _clear_dir_files(
+            ARTEFACTS_IMG_DIR,
+            extensions=(".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".tiff", ".svg"),
+        )
+        upload_removed = _clear_dir_all_except(
+            UP_DIR_JPG,
+            keep=("__init__.py", "__init__.pyc"),
+        )
+
+        return jsonify({
+            "ok": True,
+            "json_removed": json_removed,
+            "images_removed": img_removed,
+            "upload_removed": upload_removed,
+        })
+    except Exception as e:
+        app.logger.exception("Ошибка очистки отчётов")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/")
 def index():
@@ -214,10 +281,19 @@ def reports_view():
 @app.route("/export", methods=["POST", "GET"])
 def export():
     try:
-        output_path = "report.xlsx"
-
+        output_path = "report_1.xlsx"
         # 1. Собираем Excel из всех json-отчётов
-        covert_xls.json_to_xlsx("json_rep/*.json", output_path)
+        # covert_xls.json_to_xlsx(paths, output_path)
+        paths = glob.glob("json_rep/*.json")
+        df = excel_import.json_files_to_excel(paths, output_path)
+
+        # import glob
+        #
+        # paths = glob.glob("json_rep/*.json")
+        # df = json_files_to_excel(paths, "report1.xlsx")
+        print(df)
+
+
 
         if not os.path.exists(output_path):
             return jsonify({"status": "error", "message": "Файл не создан"}), 500
@@ -258,7 +334,55 @@ def too_large(_):
 
 
 
+@app.route('/artefacts')
+def artefacts_gallery():
+    if not os.path.exists(ARTEFACTS_IMG_DIR):
+        return f"Папка {ARTEFACTS_IMG_DIR} не найдена.", 404
 
+    # Достаем все файлы картинок
+    valid_extensions = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')
+    files = [
+        f for f in os.listdir(ARTEFACTS_IMG_DIR)
+        if f.lower().endswith(valid_extensions)
+    ]
+    files.sort()
+
+    html = """
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <title>Каталог артефактов</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 20px; }
+            h1 { text-align: center; color: #333; }
+            .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 20px; }
+            .card { background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; transition: transform 0.2s; }
+            .card:hover { transform: scale(1.02); }
+            .card img { max-width: 100%; height: auto; border-radius: 4px; display: block; }
+            .filename { margin-top: 10px; font-size: 12px; color: #666; word-break: break-all; }
+        </style>
+    </head>
+    <body>
+        <a href="/">На главную</a>
+
+        <h1>Каталог файлов: artefacts_img</h1>
+        <div class="gallery">
+            {% for image in images %}
+            <div class="card">
+                <a href="{{ url_for('static', filename='artefacts_img/' + image) }}" target="_blank">
+                    <img src="{{ url_for('static', filename='artefacts_img/' + image) }}" alt="{{ image }}">
+                </a>
+                <div class="filename">{{ image }}</div>
+            </div>
+            {% else %}
+            <p>В папке нет файлов.</p>
+            {% endfor %}
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html, images=files)
 
 
 

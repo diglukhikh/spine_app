@@ -1,13 +1,19 @@
 from image_class import AreaClassifier
 from spine.spine_estimator import SpineAngleEstimator
 from spine.spine_delete import ObjectRemover
-from spine.proposals import FragmentExtractor
-from spine.siamesse_check import FragmentClassifier
+# from spine.proposals import FragmentExtractor
+from spine.find_artefacts import BrightComponentsDetector
+from spine.find_artefacts_spine import BrightAreaDetector
+# from spine.siamesse_check import FragmentClassifier
 from spine.mask_json import SpineSegmenter
 from spine.pelvis_v2_clean import detect_pelvis
 from spine.vertabrae_new import SpineAnalyzer
 from spine.position_check import SpineAligner
 from find_copy import ImageDuplicateRemover
+import pipeline_sustav_new
+
+
+
 
 import shutil
 from pathlib import Path
@@ -17,8 +23,7 @@ import time
 import json
 import traceback
 from dataclasses import dataclass, asdict, field
-from typing import Optional, Callable, Any
-import pipeline_sustav
+from typing import Optional, Callable, Any, Tuple
 
 
 CHECKPOINT      = os.path.join("sam", "mobile_sam.pt")
@@ -29,6 +34,7 @@ OPERATION_DIR   = "operation"
 JSON_DIR        = "jsonmy"
 JSON_DIR_report = "json_rep"
 OUTPUT_DIR      = os.path.join(os.getcwd(), "output")
+ARTEFACTS       = os.path.join("static", "artefacts_img")
 
 
 
@@ -44,8 +50,9 @@ class StudyReport:
     artifacts_present: str = ""
     spine_angle: Optional[float] = None
     sust_posit: str = ""
-    sust_rotation_std: str = ""
+    sust_rotation_std: Optional[float] = None
     sust_side: str = ""
+    sust_protez: Optional[bool] = None
 
     taz: str = ""
     pozv: str = ""
@@ -196,55 +203,43 @@ def step_estimate_angle(report: StudyReport, path_image: str, json_path):
 
 
 @safe_step("remove_spine")
-def step_remove_spine(report: StudyReport, path_image: str, output_json: str) -> Optional[str]:
+def step_remove_spine(report: StudyReport, path_image: str, output_json: str) -> tuple[Any, Any]:
     """Шаг 5. Удаление позвоночника."""
     name, study = _split_path(path_image)
     remover = ObjectRemover(
         image_path=path_image,
         json_path=output_json,
         output_dir=OPERATION_DIR,
-        expand_percent=30,
+        expand_percent=45,
         output_path=os.path.join(OPERATION_DIR, f"{study}_{name}.png"),
     )
-    out_path = remover.run()
+    out_path, out_path_spine = remover.run()
     print("[remove] Готово")
-    time.sleep(1)
-    return out_path
+    return out_path, out_path_spine
 
 
 @safe_step("detect_artifacts")
-def step_detect_artifacts(report: StudyReport, path_image: str, clean_image: str) -> None:
+def step_detect_artifacts(report: StudyReport, path_image: str, clean_image: str, spine_image: str) -> None:
     """Шаг 6. Поиск артефактов."""
-    extractor = FragmentExtractor(clean_image)
-    clf = FragmentClassifier(db_path=SPINE_PT, target=64, k=1)
-    results = extractor.run()
-    print("[fragments] Готово")
-
-    bboxes = [
-        bb['bbox_global_x1y1x2y2']
-        for v in results.values()
-        for bb in v['merged_bboxes']
-    ]
-
-    results, resultss = clf.classify_fragments(path_image, bboxes, return_details=True)
-    print("artef", resultss)
-    report.artifacts_present = resultss
-    # if results["label"] == True:
-    #     report.artifacts_present = True
-    # else:
-    #     report.artifacts_present = False
 
     path = Path(path_image)
     folder = path.parts[1]
 
-    save_path = os.path.join(OUTPUT_DIR, f"{folder}_result.png")
-    clf.visualize_fragments(
-        path_image, bboxes,
-        results=results,
-        only_true=True,
-        true_label='true',
-        save_path=save_path,
+    detector = BrightComponentsDetector(
+        save_artifacts=True,
+        artifacts_dir=ARTEFACTS,
+        name_start=folder
     )
+    result = detector.detect(clean_image)
+
+    detector_spine = BrightAreaDetector(threshold=252, min_area=550, name_start=folder)
+    result_spine = detector_spine.process(spine_image, ARTEFACTS)
+
+    if result or result_spine:
+        report.artifacts_present = True
+    else:
+        report.artifacts_present = False
+
 
 
 @safe_step("check_position")
@@ -295,11 +290,11 @@ def analyze_spine(path_image: str) -> StudyReport:
     step_estimate_angle(report, path_image, output_json)
 
     # 4. Удаление позвоночника (нужно для поиска артефактов)
-    clean_image = step_remove_spine(report, path_image, output_json)
+    clean_image, spine_image = step_remove_spine(report, path_image, output_json)
 
     # 5. Артефакты (только если есть очищенное изображение)
     if clean_image and os.path.exists(clean_image):
-        step_detect_artifacts(report, path_image, clean_image)
+        step_detect_artifacts(report, path_image, clean_image, spine_image)
     else:
         report.add_error("detect_artifacts",
                          RuntimeError("нет очищенного изображения — шаг пропущен"))
@@ -323,13 +318,15 @@ def analyze_spine(path_image: str) -> StudyReport:
 
 
 def sustavec(img_path, report):
-    criteria, side, rasst = pipeline_sustav.main(img_path)
-    if criteria == 1:
-        rota = "vnutr rotation"
-    elif criteria == 2:
-        rota = "naruzh rotation"
-    else:
-        rota = "norma"
+    side, rotation_index, rasst, protez = pipeline_sustav_new.main(img_path)
+
+    print("sustav: ", side, rotation_index, rasst, protez)
+    # if criteria == 1:
+    #     rota = "vnutr rotation"
+    # elif criteria == 2:
+    #     rota = "naruzh rotation"
+    # else:
+    #     rota = "norma"
     report.image_name = os.path.basename(img_path)
     path = Path(img_path)
     folder = path.parts[1]
@@ -337,7 +334,9 @@ def sustavec(img_path, report):
     report.area = "sustav"
     report.sust_posit = rasst
     report.sust_side = side
-    report.sust_rotation_std = rota
+    report.sust_rotation_std = rotation_index
+    report.sust_protez = protez
+    report.status = "OK"
 
     return report
 
@@ -350,6 +349,7 @@ def main(path_image: str) -> Optional[StudyReport]:
     # Классификация
     label = step_classify(report, path_image)
     if label != "true":
+        # запуск пайплайна для сустава
         report = sustavec(path_image, report)
         # print(f"[main] Не позвоночник (label={label})")
         # report.status = "skipped"
@@ -361,7 +361,7 @@ def main(path_image: str) -> Optional[StudyReport]:
         print(f"[save] Отчёт сохранён: {out_json}")
         return report
 
-    # Основной пайплайн
+    # Пайплайн для позвоночника
     report = analyze_spine(path_image)
 
     # Сохранение отчёта
